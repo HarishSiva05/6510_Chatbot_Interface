@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { Alert } from '../types';
-import { AlertTriangle, AlertCircle, AlertOctagon } from 'lucide-react';
+import { Alert, Commit } from '../types';
+import { AlertTriangle, AlertCircle, AlertOctagon, GitCommit, Clock, Shield } from 'lucide-react';
 import { Modal } from './Modal';
 import { AlertDetail } from './AlertDetail';
 
 interface AlertPanelProps {
   alerts: Alert[];
+  latestCommit: Commit | null;
 }
 
-export const AlertPanel: React.FC<AlertPanelProps> = ({ alerts }) => {
+export const AlertPanel: React.FC<AlertPanelProps> = ({ alerts, latestCommit }) => {
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
 
   const getSeverityIcon = (severity: string) => {
@@ -27,6 +28,26 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({ alerts }) => {
       <div className="bg-white rounded-lg shadow-lg p-4">
         <h2 className="text-lg font-semibold mb-4">Security Alerts</h2>
         <div className="space-y-3">
+          {latestCommit && (
+            <div className={`border-l-4 ${latestCommit.isUnusual ? 'border-red-500 bg-red-50' : 'border-blue-500 bg-blue-50'} p-3 rounded`}>
+              <div className="flex items-center gap-2">
+                <GitCommit className={latestCommit.isUnusual ? 'text-red-500' : 'text-blue-500'} size={20} />
+                <h3 className="font-medium">{latestCommit.isUnusual ? 'Unusual Commit Detected' : 'Latest Commit'}</h3>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">
+                {latestCommit.message} in {latestCommit.repo} by {latestCommit.pusher}
+              </p>
+              <span className="text-xs text-gray-500 mt-2 block">
+                {new Date(latestCommit.timestamp).toLocaleString()}
+              </span>
+              {latestCommit.isUnusual && (
+                <div className="mt-2 text-sm text-red-600 flex items-center gap-2">
+                  <Clock size={16} />
+                  <span>Committed at an unusual time</span>
+                </div>
+              )}
+            </div>
+          )}
           {alerts.map((alert) => (
             <div
               key={alert.id}
@@ -39,7 +60,7 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({ alerts }) => {
               </div>
               <p className="text-sm text-gray-600 mt-1">{alert.description}</p>
               <span className="text-xs text-gray-500 mt-2 block">
-                {alert.timestamp.toLocaleTimeString()}
+                {alert.timestamp.toLocaleString()}
               </span>
             </div>
           ))}

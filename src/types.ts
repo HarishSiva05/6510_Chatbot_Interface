@@ -1,9 +1,10 @@
+// types.ts
 export interface Message {
   id: string;
   content: string;
   sender: 'user' | 'bot';
   timestamp: Date;
-  type?: 'normal' | 'alert' | 'warning';
+  type?: 'normal' | 'alert' | 'commit';
 }
 
 export interface Alert {
@@ -12,6 +13,14 @@ export interface Alert {
   description: string;
   severity: 'low' | 'medium' | 'high';
   timestamp: Date;
+}
+
+export interface Commit {
+  repo: string;
+  pusher: string;
+  message: string;
+  timestamp: string;
+  isUnusual: boolean;
 }
 
 export interface Repository {

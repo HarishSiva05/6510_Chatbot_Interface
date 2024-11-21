@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Message } from './types';
+import { Message, Alert, Commit } from './types';
 import { ChatMessage } from './components/ChatMessage';
 import { AlertPanel } from './components/AlertPanel';
 import { RepositoryStatus } from './components/RepositoryStatus';
@@ -17,6 +17,8 @@ function App() {
   }]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [latestCommit, setLatestCommit] = useState<Commit | null>(null);
+  const [alerts, setAlerts] = useState<Alert[]>(mockAlerts);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -26,6 +28,57 @@ function App() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    const eventSource = new EventSource('http://localhost:5000/events');
+    
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'commit') {
+        const newCommit: Commit = {
+          ...data,
+          isUnusual: false
+        };
+        setLatestCommit(newCommit);
+        const commitMessage: Message = {
+          id: Date.now().toString(),
+          content: `New commit in ${data.repo} by ${data.pusher}: ${data.message}`,
+          sender: 'bot',
+          timestamp: new Date(data.timestamp),
+          type: 'commit'
+        };
+        setMessages(prev => [...prev, commitMessage]);
+      } else if (data.type === 'alert') {
+        const newAlert: Alert = {
+          id: Date.now().toString(),
+          title: 'Unusual Commit Detected',
+          description: data.message,
+          severity: 'high',
+          timestamp: new Date()
+        };
+        setAlerts(prev => [newAlert, ...prev]);
+        const alertMessage: Message = {
+          id: Date.now().toString(),
+          content: data.message,
+          sender: 'bot',
+          timestamp: new Date(),
+          type: 'alert'
+        };
+        setMessages(prev => [...prev, alertMessage]);
+        // Update the latest commit to mark it as unusual
+        setLatestCommit(prev => prev ? { ...prev, isUnusual: true } : null);
+      }
+    };
+
+    eventSource.onerror = (error) => {
+      console.error('EventSource failed:', error);
+      eventSource.close();
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,7 +163,7 @@ function App() {
           </div>
 
           <div className="space-y-6">
-            <AlertPanel alerts={mockAlerts} />
+            <AlertPanel alerts={alerts} latestCommit={latestCommit} />
             <RepositoryStatus repositories={mockRepositories} />
           </div>
         </div>
